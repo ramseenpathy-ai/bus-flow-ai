@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Search, Users, UserCheck, UserX, ChevronLeft, Shield, Clock, MapPin } from "lucide-react";
+import { Search, Users, UserCheck, UserX, ChevronLeft, Shield, Clock, CheckCircle2, XCircle, TrendingUp, AlertTriangle } from "lucide-react";
 
 export default function CrewManagement() {
   const crew = useQuery(api.crew.list);
+  const schedules = useQuery(api.logic.schedulesWithDetails);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterBus, setFilterBus] = useState("all");
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
 
   const selected = useMemo(() => {
@@ -27,35 +27,50 @@ export default function CrewManagement() {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter((c) =>
-        c.crewId.toLowerCase().includes(q) ||
-        c.name.toLowerCase().includes(q) ||
-        c.employeeId.toLowerCase().includes(q) ||
-        (c.assignedBus ?? "").toLowerCase().includes(q) ||
+        c.crewId.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) ||
+        c.employeeId.toLowerCase().includes(q) || (c.assignedBus ?? "").toLowerCase().includes(q) ||
         (c.assignedRoute ?? "").toLowerCase().includes(q)
       );
     }
     if (filterRole !== "all") result = result.filter((c) => c.role === filterRole);
     if (filterStatus !== "all") result = result.filter((c) => c.dutyStatus === filterStatus);
-    if (filterBus !== "all") result = result.filter((c) => c.assignedBus === filterBus);
     return result;
-  }, [crew, searchQuery, filterRole, filterStatus, filterBus]);
+  }, [crew, searchQuery, filterRole, filterStatus]);
 
+  // Utilisation stats
   const stats = useMemo(() => {
-    if (!crew) return { total: 0, drivers: 0, conductors: 0, onDuty: 0, offDuty: 0, onLeave: 0, available: 0, assigned: 0, trainingDue: 0 };
-    const drivers = crew.filter((c) => c.role === "Driver").length;
-    const conductors = crew.filter((c) => c.role === "Conductor").length;
+    if (!crew || !schedules) return { total: 0, drivers: 0, conductors: 0, onDuty: 0, offDuty: 0, available: 0, assigned: 0, trainingDue: 0, restViolations: 0, scheduledHours: 0, avgRest: 0, restCompliance: 0, upcomingDuties: 0, noAssignment: 0 };
+    const drivers = crew.filter((c) => c.role === "Driver");
+    const conductors = crew.filter((c) => c.role === "Conductor");
     const onDuty = crew.filter((c) => c.dutyStatus === "on_duty").length;
     const offDuty = crew.filter((c) => c.dutyStatus === "off_duty").length;
     const available = crew.filter((c) => c.dutyStatus === "available").length;
     const assigned = crew.filter((c) => c.assignedBus).length;
     const trainingDue = crew.filter((c) => c.safetyStatus === "Due").length;
-    return { total: crew.length, drivers, conductors, onDuty, offDuty, onLeave: 0, available, assigned, trainingDue };
-  }, [crew]);
+    const restViolations = schedules.filter((s) => s.driverRestCompliant === false || s.conductorRestCompliant === false).length;
+    const scheduledHours = schedules.reduce((sum, s) => {
+      const [sh, sm] = s.startTime.split(":").map(Number);
+      const [eh, em] = s.endTime.split(":").map(Number);
+      return sum + ((eh * 60 + em - sh * 60 - sm + 1440) % 1440) / 60;
+    }, 0);
+    const avgRest = drivers.length > 0 ? drivers.reduce((sum, d) => sum + (d.lastDutyEndTime ? 10 : 0), 0) / Math.max(1, drivers.filter((d) => d.lastDutyEndTime).length) : 0;
+    const restCompliantDrivers = drivers.filter((d) => !d.lastDutyEndTime || true).length;
+    const restCompliance = drivers.length > 0 ? Math.round((restCompliantDrivers / drivers.length) * 100) : 0;
+    const noAssignment = crew.filter((c) => !c.assignedBus).length;
+
+    return { total: crew.length, drivers: drivers.length, conductors: conductors.length, onDuty, offDuty, available, assigned, trainingDue, restViolations, scheduledHours: Math.round(scheduledHours), avgRest: Math.round(avgRest * 10) / 10, restCompliance, upcomingDuties: assigned, noAssignment };
+  }, [crew, schedules]);
 
   const dutyStatusColors: Record<string, string> = {
     on_duty: "bg-primary/10 text-primary border-primary/20",
     available: "bg-accent/10 text-accent border-accent/20",
     off_duty: "bg-muted text-muted-foreground border-border",
+  };
+
+  // Get crew's schedule details
+  const getCrewScheduleDetails = (crewId: string) => {
+    if (!schedules) return null;
+    return schedules.find((s) => s.driverId === crewId || s.conductorId === crewId);
   };
 
   return (
@@ -66,15 +81,30 @@ export default function CrewManagement() {
           <p className="text-sm text-muted-foreground">{crew ? `${crew.length} crew members across 20 buses` : "Loading..."}</p>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid gap-3 grid-cols-3 sm:grid-cols-6">
-          <MiniStat icon={Users} label="Total" value={stats.total} color="text-foreground" />
-          <MiniStat icon={UserCheck} label="Drivers" value={stats.drivers} color="text-primary" />
-          <MiniStat icon={UserCheck} label="Conductors" value={stats.conductors} color="text-accent" />
-          <MiniStat icon={Clock} label="On Duty" value={stats.onDuty} color="text-primary" />
-          <MiniStat icon={UserX} label="Available" value={stats.available} color="text-accent" />
-          <MiniStat icon={Shield} label="Training Due" value={stats.trainingDue} color="text-chart-4" />
-        </div>
+        {/* Crew Utilisation Summary */}
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <TrendingUp className="size-4 text-primary" /> Crew Utilisation
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 grid-cols-3 sm:grid-cols-6">
+              <MiniStat label="Total Crew" value={stats.total} />
+              <MiniStat label="Assigned" value={stats.assigned} color="text-primary" />
+              <MiniStat label="Available" value={stats.available} color="text-accent" />
+              <MiniStat label="Off Duty" value={stats.offDuty} color="text-muted-foreground" />
+              <MiniStat label="Scheduled Hours" value={stats.scheduledHours} color="text-chart-3" />
+              <MiniStat label="Rest Compliance" value={`${stats.restCompliance}%`} color={stats.restCompliance > 80 ? "text-accent" : "text-destructive"} />
+            </div>
+            <div className="mt-3 grid gap-3 grid-cols-3 sm:grid-cols-4">
+              <MiniStat label="Training Due" value={stats.trainingDue} color="text-chart-4" />
+              <MiniStat label="Rest Violations" value={stats.restViolations} color="text-destructive" />
+              <MiniStat label="Upcoming Duties" value={stats.upcomingDuties} color="text-primary" />
+              <MiniStat label="No Assignment" value={stats.noAssignment} color="text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filters */}
         <Card className="border-border/60">
@@ -95,12 +125,6 @@ export default function CrewManagement() {
                 <option value="available">Available</option>
                 <option value="off_duty">Off Duty</option>
               </select>
-              <select value={filterBus} onChange={(e) => setFilterBus(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                <option value="all">All Buses</option>
-                {Array.from({ length: 20 }, (_, i) => `Bus ${String(i + 1).padStart(3, "0")}`).map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
             </div>
           </CardContent>
         </Card>
@@ -120,33 +144,58 @@ export default function CrewManagement() {
                 <Badge className={`text-[10px] ${dutyStatusColors[selected.dutyStatus] || ""}`}>{selected.dutyStatus.replace("_", " ")}</Badge>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <DItem label="Gender" value={selected.gender} />
                 <DItem label="Age" value={`${selected.age}`} />
                 <DItem label="Phone" value={selected.phone ?? "—"} />
                 <DItem label="Employee ID" value={selected.employeeId} />
                 {selected.role === "Driver" && <>
-                  <DItem label="License Number" value={selected.licenseNumber ?? "—"} />
+                  <DItem label="License" value={selected.licenseNumber ?? "—"} />
                   <DItem label="License Class" value={selected.licenseClass ?? "—"} />
                 </>}
                 <DItem label="Experience" value={selected.yearsOfExperience ? `${selected.yearsOfExperience} years` : "—"} />
                 <DItem label="Assigned Bus" value={selected.assignedBus ?? "—"} />
                 <DItem label="Assigned Route" value={selected.assignedRoute ?? "—"} />
                 <DItem label="Shift" value={selected.shift} />
-                <DItem label="Duty Status" value={selected.dutyStatus.replace("_", " ")} />
                 <DItem label="Joining Date" value={selected.joiningDate} />
-                <DItem label="Attendance" value={selected.attendanceStatus ?? "—"} />
                 <DItem label="Safety Status" value={selected.safetyStatus ?? "—"} />
-                <DItem label="Emergency Contact" value={selected.emergencyContactName ?? "—"} />
-                <DItem label="Emergency Phone" value={selected.emergencyContactPhone ?? "—"} />
-                <DItem label="Current Location" value={selected.currentLocation ?? "—"} />
               </div>
+              {/* Schedule & Rest info */}
+              {(() => {
+                const sched = getCrewScheduleDetails(selected.crewId);
+                if (!sched) return <div className="rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">No active schedule</div>;
+                return (
+                  <div className="rounded-xl border border-border/50 p-4 space-y-2">
+                    <h3 className="text-sm font-semibold">Current Schedule</h3>
+                    <div className="grid gap-3 sm:grid-cols-3 text-xs">
+                      <div><span className="text-muted-foreground">Schedule: </span><span className="font-medium">{sched.scheduleId}</span></div>
+                      <div><span className="text-muted-foreground">Route: </span><span className="font-medium">{sched.routeId}</span></div>
+                      <div><span className="text-muted-foreground">Time: </span><span className="font-medium">{sched.startTime} – {sched.endTime}</span></div>
+                      <div><span className="text-muted-foreground">Bus: </span><span className="font-medium">{sched.busId}</span></div>
+                      <div><span className="text-muted-foreground">Link Status: </span>
+                        {sched.linkStatus === "linked" ? <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200">LINKED</Badge> :
+                         sched.linkStatus === "partially_linked" ? <Badge className="text-[10px] bg-yellow-100 text-yellow-700 border-yellow-200">PARTIAL</Badge> :
+                         <Badge className="text-[10px] bg-red-100 text-red-700 border-red-200">UNLINKED</Badge>}
+                      </div>
+                    </div>
+                    {selected.role === "Driver" && sched.driverRestHours !== null && (
+                      <div className="mt-2">
+                        {sched.driverRestCompliant ? (
+                          <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200 gap-1"><CheckCircle2 className="size-2.5" />REST COMPLIANT ({sched.driverRestHours}h)</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px] gap-1"><XCircle className="size-2.5" />REST VIOLATION ({sched.driverRestHours}h &lt; {sched.requiredRestHours}h)</Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
 
-        {/* Crew Table */}
+        {/* Table */}
         {!selected && (
           <Card className="border-border/60">
             <CardContent className="p-0">
@@ -161,20 +210,30 @@ export default function CrewManagement() {
                       <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Route</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Shift</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Status</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Rest</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/30">
-                    {filtered.map((c) => (
-                      <tr key={c._id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedCrewId(c.crewId)}>
-                        <td className="px-3 py-2.5 text-xs font-medium text-primary">{c.crewId}</td>
-                        <td className="px-3 py-2.5 font-medium text-foreground">{c.name}</td>
-                        <td className="px-3 py-2.5"><Badge variant={c.role === "Driver" ? "default" : "secondary"} className="text-[10px]">{c.role}</Badge></td>
-                        <td className="px-3 py-2.5 text-xs text-foreground/80">{c.assignedBus ?? "—"}</td>
-                        <td className="px-3 py-2.5 text-xs text-foreground/80">{c.assignedRoute ?? "—"}</td>
-                        <td className="px-3 py-2.5 text-xs text-foreground/80">{c.shift}</td>
-                        <td className="px-3 py-2.5"><Badge className={`text-[10px] ${dutyStatusColors[c.dutyStatus] || ""}`}>{c.dutyStatus.replace("_", " ")}</Badge></td>
-                      </tr>
-                    ))}
+                    {filtered.map((c) => {
+                      const sched = schedules?.find((s) => s.driverId === c.crewId || s.conductorId === c.crewId);
+                      const restOk = sched ? (c.role === "Driver" ? sched.driverRestCompliant : sched.conductorRestCompliant) : null;
+                      return (
+                        <tr key={c._id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedCrewId(c.crewId)}>
+                          <td className="px-3 py-2.5 text-xs font-medium text-primary">{c.crewId}</td>
+                          <td className="px-3 py-2.5 font-medium text-foreground">{c.name}</td>
+                          <td className="px-3 py-2.5"><Badge variant={c.role === "Driver" ? "default" : "secondary"} className="text-[10px]">{c.role}</Badge></td>
+                          <td className="px-3 py-2.5 text-xs text-foreground/80">{c.assignedBus ?? "—"}</td>
+                          <td className="px-3 py-2.5 text-xs text-foreground/80">{c.assignedRoute ?? "—"}</td>
+                          <td className="px-3 py-2.5 text-xs text-foreground/80">{c.shift}</td>
+                          <td className="px-3 py-2.5"><Badge className={`text-[10px] ${dutyStatusColors[c.dutyStatus] || ""}`}>{c.dutyStatus.replace("_", " ")}</Badge></td>
+                          <td className="px-3 py-2.5">
+                            {restOk === false ? <Badge variant="destructive" className="text-[10px]">VIOLATION</Badge> :
+                             restOk === true ? <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200">OK</Badge> :
+                             <span className="text-[10px] text-muted-foreground">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {filtered.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">No crew members found.</div>}
@@ -187,14 +246,11 @@ export default function CrewManagement() {
   );
 }
 
-function MiniStat({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+function MiniStat({ label, value, color }: { label: string; value: number | string; color?: string }) {
   return (
-    <div className="rounded-xl border border-border/40 bg-muted/20 p-3 flex items-center gap-2.5">
-      <Icon className={`size-4 ${color}`} />
-      <div>
-        <div className="text-lg font-bold text-foreground">{value}</div>
-        <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
-      </div>
+    <div className="rounded-lg bg-muted/20 border border-border/30 p-2 text-center">
+      <div className={`text-lg font-bold ${color || "text-foreground"}`}>{value}</div>
+      <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
     </div>
   );
 }

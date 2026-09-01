@@ -98,6 +98,10 @@ const schema = defineSchema(
       emergencyContactName: v.optional(v.string()),
       emergencyContactPhone: v.optional(v.string()),
       notes: v.optional(v.string()),
+      // Rest period tracking
+      requiredRestHours: v.optional(v.number()),
+      lastDutyEndTime: v.optional(v.string()),
+      nextDutyStartTime: v.optional(v.string()),
     })
       .index("by_crewId", ["crewId"])
       .index("by_role", ["role"])
@@ -143,6 +147,7 @@ const schema = defineSchema(
       scheduledTrips: v.number(),
       status: v.string(),
       delayMinutes: v.number(),
+      linkStatus: v.optional(v.string()),
       notes: v.optional(v.string()),
     })
       .index("by_bus", ["busId"])
