@@ -1,218 +1,175 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import {
-  Plus,
-  Bus,
-  Wrench,
-  CheckCircle2,
-  XCircle,
-  Trash2,
-  Users,
-  MapPin,
-} from "lucide-react";
-import { toast } from "sonner";
-
-const DEPOTS = ["Central Depot", "Harbor Depot", "University Depot", "Airport Depot"];
+import { Search, Bus, Wrench, CheckCircle2, XCircle, Fuel, Gauge, ChevronLeft } from "lucide-react";
 
 export default function BusManagement() {
   const buses = useQuery(api.buses.list);
-  const createBus = useMutation(api.buses.create);
   const updateBus = useMutation(api.buses.update);
-  const deleteBus = useMutation(api.buses.remove);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [form, setForm] = useState({
-    busId: "",
-    capacity: 45,
-    currentStatus: "available",
-    depot: "Central Depot",
-    maintenanceStatus: "",
-  });
+  const selected = useMemo(() => {
+    if (!buses || !selectedBusId) return null;
+    return buses.find((b) => b.busId === selectedBusId) ?? null;
+  }, [buses, selectedBusId]);
 
-  const handleCreate = async () => {
-    if (!form.busId) {
-      toast.error("Bus ID is required");
-      return;
+  const filtered = useMemo(() => {
+    if (!buses) return [];
+    let result = [...buses];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((b) =>
+        b.busId.toLowerCase().includes(q) ||
+        b.registrationNumber.toLowerCase().includes(q) ||
+        b.routeId.toLowerCase().includes(q) ||
+        b.origin.toLowerCase().includes(q) ||
+        b.destination.toLowerCase().includes(q)
+      );
     }
-    try {
-      await createBus({
-        busId: form.busId,
-        capacity: form.capacity,
-        currentStatus: form.currentStatus,
-        depot: form.depot,
-        maintenanceStatus: form.maintenanceStatus || undefined,
-        assignedRoute: undefined,
-        assignedDuty: undefined,
-        availabilityTime: undefined,
-        lastMaintenance: undefined,
-      });
-      toast.success(`Bus ${form.busId} added to fleet`);
-      setShowCreateDialog(false);
-      setForm({ busId: "", capacity: 45, currentStatus: "available", depot: "Central Depot", maintenanceStatus: "" });
-    } catch (e: any) {
-      toast.error(e.message || "Failed to add bus");
-    }
+    if (filterStatus !== "all") result = result.filter((b) => b.currentStatus === filterStatus);
+    return result;
+  }, [buses, searchQuery, filterStatus]);
+
+  const statusCfg: Record<string, { icon: any; color: string; bg: string; label: string }> = {
+    on_route: { icon: Bus, color: "text-primary", bg: "bg-primary/10", label: "On Route" },
+    available: { icon: CheckCircle2, color: "text-accent", bg: "bg-accent/10", label: "Available" },
+    maintenance: { icon: Wrench, color: "text-chart-4", bg: "bg-chart-4/10", label: "Maintenance" },
+    off_duty: { icon: XCircle, color: "text-muted-foreground", bg: "bg-muted", label: "Off Duty" },
   };
 
-  const handleDelete = async (id: any) => {
-    await deleteBus({ id });
-    toast.success("Bus removed from fleet");
-  };
-
-  const handleStatusChange = async (id: any, status: string) => {
-    await updateBus({ id, currentStatus: status });
-    toast.success("Status updated");
-  };
-
-  const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-    available: { color: "bg-accent/10 text-accent border-accent/20", icon: CheckCircle2, label: "Available" },
-    on_route: { color: "bg-primary/10 text-primary border-primary/20", icon: Bus, label: "On Route" },
-    maintenance: { color: "bg-chart-4/10 text-chart-4 border-chart-4/20", icon: Wrench, label: "Maintenance" },
-    off_duty: { color: "bg-muted text-muted-foreground border-border", icon: XCircle, label: "Off Duty" },
-  };
+  const fleetStats = useMemo(() => {
+    if (!buses) return { total: 0, onRoute: 0, available: 0, maintenance: 0, offDuty: 0, utilization: 0 };
+    const onRoute = buses.filter((b) => b.currentStatus === "on_route").length;
+    const available = buses.filter((b) => b.currentStatus === "available").length;
+    const maintenance = buses.filter((b) => b.currentStatus === "maintenance").length;
+    const offDuty = buses.filter((b) => b.currentStatus === "off_duty").length;
+    return { total: buses.length, onRoute, available, maintenance, offDuty, utilization: buses.length > 0 ? Math.round((onRoute / buses.length) * 100) : 0 };
+  }, [buses]);
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Fleet Management</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage buses, track status, and check availability
-            </p>
-          </div>
-          <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-1.5">
-            <Plus className="size-3.5" />
-            Add Bus
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Fleet Management</h1>
+          <p className="text-sm text-muted-foreground">{buses ? `${buses.length} buses in Chennai MTC fleet` : "Loading..."}</p>
         </div>
 
-        {/* Fleet Stats */}
-        {buses && (
-          <div className="grid gap-4 sm:grid-cols-4">
-            {Object.entries(statusConfig).map(([status, config]) => (
-              <Card key={status} className="border-border/60">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div className={`flex size-9 items-center justify-center rounded-lg ${config.color.split(" ")[0]}`}>
-                    <config.icon className={`size-4 ${config.color.split(" ")[1]}`} />
-                  </div>
+        {/* TOTAL FLEET */}
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Bus className="size-4 text-primary" /> Total Fleet
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-5">
+              <StatCard label="Total Fleet" value={fleetStats.total} />
+              <StatCard label="On Route" value={fleetStats.onRoute} color="text-primary" />
+              <StatCard label="Available" value={fleetStats.available} color="text-accent" />
+              <StatCard label="Maintenance" value={fleetStats.maintenance} color="text-chart-4" />
+              <StatCard label="Off Duty" value={fleetStats.offDuty} color="text-muted-foreground" />
+            </div>
+            <div className="mt-4 flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Fleet Utilization:</span>
+                <span className="text-lg font-bold text-foreground">{fleetStats.utilization}%</span>
+              </div>
+              <div className="flex-1 h-2 overflow-hidden rounded-full bg-muted max-w-xs">
+                <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${fleetStats.utilization}%` }} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Search & Filter */}
+        <Card className="border-border/60">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input placeholder="Search bus ID, registration, route, origin..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+              </div>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="all">All Status</option>
+                <option value="on_route">On Route</option>
+                <option value="available">Available</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="off_duty">Off Duty</option>
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detail View */}
+        {selected && (
+          <Card className="border-primary/20 bg-primary/[0.02]">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="icon" className="size-8" onClick={() => setSelectedBusId(null)}><ChevronLeft className="size-4" /></Button>
                   <div>
-                    <div className="text-lg font-bold text-foreground">
-                      {buses.filter((b) => b.currentStatus === status).length}
-                    </div>
-                    <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                      {config.label}
-                    </div>
+                    <CardTitle className="text-lg font-bold">{selected.busId}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{selected.registrationNumber} · {selected.origin} → {selected.destination}</p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+                {(() => { const cfg = statusCfg[selected.currentStatus] || statusCfg.available; return <Badge className={`${cfg.bg} ${cfg.color} border-0`}>{cfg.label}</Badge>; })()}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <DetailItem label="Registration" value={selected.registrationNumber} />
+                <DetailItem label="Route" value={selected.routeId} />
+                <DetailItem label="Bus Type" value={selected.busType} />
+                <DetailItem label="Capacity" value={`${selected.capacity} seats`} />
+                <DetailItem label="Driver" value={selected.assignedDriver ?? "Unassigned"} />
+                <DetailItem label="Conductor" value={selected.assignedConductor ?? "Unassigned"} />
+                <DetailItem label="Fuel Level" value={`${selected.fuelLevel}%`} />
+                <DetailItem label="Mileage" value={selected.mileage ? `${selected.mileage.toLocaleString()} km` : "—"} />
+                <DetailItem label="Operating Hours" value={selected.operatingHours ?? "—"} />
+                <DetailItem label="Last Maintenance" value={selected.lastMaintenance ?? "—"} />
+                <DetailItem label="Next Maintenance" value={selected.nextMaintenance ?? "—"} />
+                <DetailItem label="Last Inspection" value={selected.lastInspection ?? "—"} />
+              </div>
+              {selected.notes && <div className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">{selected.notes}</div>}
+            </CardContent>
+          </Card>
         )}
 
-        {/* Bus Grid */}
-        {buses && (
+        {/* Bus Cards */}
+        {!selected && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {buses.map((bus) => {
-              const config = statusConfig[bus.currentStatus] || statusConfig.off_duty;
+            {filtered.map((bus) => {
+              const cfg = statusCfg[bus.currentStatus] || statusCfg.available;
               return (
-                <Card key={bus._id} className="border-border/60 transition-all hover:shadow-md hover:shadow-primary/[0.02]">
+                <Card key={bus._id} className="border-border/60 cursor-pointer transition-all hover:shadow-md hover:shadow-primary/[0.02]" onClick={() => setSelectedBusId(bus.busId)}>
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-base font-bold text-foreground">{bus.busId}</span>
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${config.color}`}>
-                            {config.label}
-                          </span>
+                          <Badge className={`text-[10px] ${cfg.bg} ${cfg.color} border-0`}>{cfg.label}</Badge>
                         </div>
-                        <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="size-3" />
-                          {bus.depot}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(bus._id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div className="rounded-lg bg-muted/30 p-2">
-                        <div className="text-xs text-muted-foreground">Capacity</div>
-                        <div className="flex items-center gap-1 text-sm font-medium text-foreground">
-                          <Users className="size-3" />
-                          {bus.capacity} seats
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-muted/30 p-2">
-                        <div className="text-xs text-muted-foreground">Status</div>
-                        <div className="text-sm font-medium text-foreground">
-                          {bus.currentStatus.replace("_", " ")}
-                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{bus.registrationNumber}</p>
                       </div>
                     </div>
-
-                    {bus.assignedRoute && (
-                      <div className="mb-3 rounded-lg bg-primary/5 p-2 text-xs">
-                        <span className="font-medium text-primary">Assigned: </span>
-                        <span className="text-foreground/80">{bus.assignedRoute}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-foreground/80">
+                        <span className="font-medium text-primary">{bus.routeId}</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span>{bus.origin} → {bus.destination}</span>
                       </div>
-                    )}
-
-                    {bus.maintenanceStatus && (
-                      <div className="mb-3 rounded-lg bg-chart-4/5 p-2 text-xs">
-                        <span className="font-medium text-chart-4">Maintenance: </span>
-                        <span className="text-foreground/80">{bus.maintenanceStatus}</span>
+                      <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-1"><Fuel className="size-3" />{bus.fuelLevel}%</span>
+                        <span className="flex items-center gap-1"><Gauge className="size-3" />{bus.mileage?.toLocaleString() ?? "—"} km</span>
+                        <span>{bus.busType} · {bus.capacity} seats</span>
                       </div>
-                    )}
-
-                    <div className="flex gap-1.5">
-                      {bus.currentStatus !== "available" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          onClick={() => handleStatusChange(bus._id, "available")}
-                        >
-                          Set Available
-                        </Button>
-                      )}
-                      {bus.currentStatus !== "maintenance" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          onClick={() => handleStatusChange(bus._id, "maintenance")}
-                        >
-                          Maintenance
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -220,79 +177,25 @@ export default function BusManagement() {
             })}
           </div>
         )}
-
-        {/* Create Dialog */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Bus to Fleet</DialogTitle>
-              <DialogDescription>Register a new bus in the system</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Bus ID</Label>
-                  <Input
-                    value={form.busId}
-                    onChange={(e) => setForm({ ...form, busId: e.target.value })}
-                    placeholder="B-009"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Capacity (seats)</Label>
-                  <Input
-                    type="number"
-                    value={form.capacity}
-                    onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Depot</Label>
-                  <Select value={form.depot} onValueChange={(v) => setForm({ ...form, depot: v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DEPOTS.map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Initial Status</Label>
-                  <Select value={form.currentStatus} onValueChange={(v) => setForm({ ...form, currentStatus: v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="off_duty">Off Duty</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Maintenance Notes (optional)</Label>
-                <Input
-                  value={form.maintenanceStatus}
-                  onChange={(e) => setForm({ ...form, maintenanceStatus: e.target.value })}
-                  placeholder="Scheduled brake service"
-                  className="mt-1"
-                />
-              </div>
-              <Button onClick={handleCreate} className="w-full">
-                Add Bus
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
+  );
+}
+
+function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
+  return (
+    <div className="rounded-xl border border-border/40 bg-muted/20 p-3 text-center">
+      <div className={`text-2xl font-bold ${color || "text-foreground"}`}>{value}</div>
+      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mt-1">{label}</div>
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-muted/30 p-2.5">
+      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-sm font-medium text-foreground">{value}</div>
+    </div>
   );
 }

@@ -1,376 +1,209 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useState, useMemo } from "react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import {
-  Plus,
-  Users,
-  Clock,
-  ShieldCheck,
-  AlertTriangle,
-  Trash2,
-  Phone,
-  MapPin,
-} from "lucide-react";
-import { toast } from "sonner";
-
-const DEPOTS = ["Central Depot", "Harbor Depot", "University Depot", "Airport Depot"];
-const ROLES = ["Driver", "Conductor", "Inspector", "Mechanic"];
+import { Search, Users, UserCheck, UserX, ChevronLeft, Shield, Clock, MapPin } from "lucide-react";
 
 export default function CrewManagement() {
   const crew = useQuery(api.crew.list);
-  const createCrew = useMutation(api.crew.create);
-  const updateCrew = useMutation(api.crew.update);
-  const deleteCrew = useMutation(api.crew.remove);
-  const restCheck = useQuery(
-    api.crew.validateRestPeriod,
-    { crewId: "", proposedStartTime: "06:00" }
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterBus, setFilterBus] = useState("all");
+  const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [form, setForm] = useState({
-    crewId: "",
-    name: "",
-    role: "Driver",
-    assignedDepot: "Central Depot",
-    availability: "available",
-    requiredRestPeriod: 8,
-    phone: "",
-  });
+  const selected = useMemo(() => {
+    if (!crew || !selectedCrewId) return null;
+    return crew.find((c) => c.crewId === selectedCrewId) ?? null;
+  }, [crew, selectedCrewId]);
 
-  const handleCreate = async () => {
-    if (!form.crewId || !form.name) {
-      toast.error("Crew ID and name are required");
-      return;
+  const filtered = useMemo(() => {
+    if (!crew) return [];
+    let result = [...crew];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((c) =>
+        c.crewId.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        c.employeeId.toLowerCase().includes(q) ||
+        (c.assignedBus ?? "").toLowerCase().includes(q) ||
+        (c.assignedRoute ?? "").toLowerCase().includes(q)
+      );
     }
-    try {
-      await createCrew({
-        ...form,
-        dutyStartTime: undefined,
-        dutyEndTime: undefined,
-        lastCompletedDuty: undefined,
-        currentAssignment: undefined,
-      });
-      toast.success(`${form.name} added to crew database`);
-      setShowCreateDialog(false);
-      setForm({
-        crewId: "", name: "", role: "Driver", assignedDepot: "Central Depot",
-        availability: "available", requiredRestPeriod: 8, phone: "",
-      });
-    } catch (e: any) {
-      toast.error(e.message || "Failed to create crew member");
-    }
-  };
+    if (filterRole !== "all") result = result.filter((c) => c.role === filterRole);
+    if (filterStatus !== "all") result = result.filter((c) => c.dutyStatus === filterStatus);
+    if (filterBus !== "all") result = result.filter((c) => c.assignedBus === filterBus);
+    return result;
+  }, [crew, searchQuery, filterRole, filterStatus, filterBus]);
 
-  const handleDelete = async (id: any) => {
-    await deleteCrew({ id });
-    toast.success("Crew member removed");
-  };
+  const stats = useMemo(() => {
+    if (!crew) return { total: 0, drivers: 0, conductors: 0, onDuty: 0, offDuty: 0, onLeave: 0, available: 0, assigned: 0, trainingDue: 0 };
+    const drivers = crew.filter((c) => c.role === "Driver").length;
+    const conductors = crew.filter((c) => c.role === "Conductor").length;
+    const onDuty = crew.filter((c) => c.dutyStatus === "on_duty").length;
+    const offDuty = crew.filter((c) => c.dutyStatus === "off_duty").length;
+    const available = crew.filter((c) => c.dutyStatus === "available").length;
+    const assigned = crew.filter((c) => c.assignedBus).length;
+    const trainingDue = crew.filter((c) => c.safetyStatus === "Due").length;
+    return { total: crew.length, drivers, conductors, onDuty, offDuty, onLeave: 0, available, assigned, trainingDue };
+  }, [crew]);
 
-  const statusColors: Record<string, string> = {
-    available: "bg-accent/10 text-accent border-accent/20",
+  const dutyStatusColors: Record<string, string> = {
     on_duty: "bg-primary/10 text-primary border-primary/20",
-    resting: "bg-chart-4/10 text-chart-4 border-chart-4/20",
+    available: "bg-accent/10 text-accent border-accent/20",
     off_duty: "bg-muted text-muted-foreground border-border",
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Crew Management</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage crew members, availability, and rest periods
-            </p>
-          </div>
-          <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-1.5">
-            <Plus className="size-3.5" />
-            Add Crew Member
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Crew Management</h1>
+          <p className="text-sm text-muted-foreground">{crew ? `${crew.length} crew members across 20 buses` : "Loading..."}</p>
         </div>
 
-        {/* Summary Cards */}
-        {crew && (
-          <div className="grid gap-4 sm:grid-cols-4">
-            <MiniStat
-              icon={Users}
-              label="Total Crew"
-              value={crew.length}
-              color="text-primary"
-              bg="bg-primary/10"
-            />
-            <MiniStat
-              icon={ShieldCheck}
-              label="Available"
-              value={crew.filter((c) => c.availability === "available").length}
-              color="text-accent"
-              bg="bg-accent/10"
-            />
-            <MiniStat
-              icon={Clock}
-              label="On Duty"
-              value={crew.filter((c) => c.availability === "on_duty").length}
-              color="text-primary"
-              bg="bg-primary/10"
-            />
-            <MiniStat
-              icon={AlertTriangle}
-              label="Resting"
-              value={crew.filter((c) => c.availability === "resting").length}
-              color="text-chart-4"
-              bg="bg-chart-4/10"
-            />
-          </div>
+        {/* Stats Row */}
+        <div className="grid gap-3 grid-cols-3 sm:grid-cols-6">
+          <MiniStat icon={Users} label="Total" value={stats.total} color="text-foreground" />
+          <MiniStat icon={UserCheck} label="Drivers" value={stats.drivers} color="text-primary" />
+          <MiniStat icon={UserCheck} label="Conductors" value={stats.conductors} color="text-accent" />
+          <MiniStat icon={Clock} label="On Duty" value={stats.onDuty} color="text-primary" />
+          <MiniStat icon={UserX} label="Available" value={stats.available} color="text-accent" />
+          <MiniStat icon={Shield} label="Training Due" value={stats.trainingDue} color="text-chart-4" />
+        </div>
+
+        {/* Filters */}
+        <Card className="border-border/60">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input placeholder="Search crew ID, name, bus, route..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+              </div>
+              <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="all">All Roles</option>
+                <option value="Driver">Drivers</option>
+                <option value="Conductor">Conductors</option>
+              </select>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="all">All Status</option>
+                <option value="on_duty">On Duty</option>
+                <option value="available">Available</option>
+                <option value="off_duty">Off Duty</option>
+              </select>
+              <select value={filterBus} onChange={(e) => setFilterBus(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                <option value="all">All Buses</option>
+                {Array.from({ length: 20 }, (_, i) => `Bus ${String(i + 1).padStart(3, "0")}`).map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detail View */}
+        {selected && (
+          <Card className="border-primary/20 bg-primary/[0.02]">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="icon" className="size-8" onClick={() => setSelectedCrewId(null)}><ChevronLeft className="size-4" /></Button>
+                  <div>
+                    <CardTitle className="text-lg font-bold">{selected.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{selected.crewId} · {selected.employeeId} · {selected.role}</p>
+                  </div>
+                </div>
+                <Badge className={`text-[10px] ${dutyStatusColors[selected.dutyStatus] || ""}`}>{selected.dutyStatus.replace("_", " ")}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <DItem label="Gender" value={selected.gender} />
+                <DItem label="Age" value={`${selected.age}`} />
+                <DItem label="Phone" value={selected.phone ?? "—"} />
+                <DItem label="Employee ID" value={selected.employeeId} />
+                {selected.role === "Driver" && <>
+                  <DItem label="License Number" value={selected.licenseNumber ?? "—"} />
+                  <DItem label="License Class" value={selected.licenseClass ?? "—"} />
+                </>}
+                <DItem label="Experience" value={selected.yearsOfExperience ? `${selected.yearsOfExperience} years` : "—"} />
+                <DItem label="Assigned Bus" value={selected.assignedBus ?? "—"} />
+                <DItem label="Assigned Route" value={selected.assignedRoute ?? "—"} />
+                <DItem label="Shift" value={selected.shift} />
+                <DItem label="Duty Status" value={selected.dutyStatus.replace("_", " ")} />
+                <DItem label="Joining Date" value={selected.joiningDate} />
+                <DItem label="Attendance" value={selected.attendanceStatus ?? "—"} />
+                <DItem label="Safety Status" value={selected.safetyStatus ?? "—"} />
+                <DItem label="Emergency Contact" value={selected.emergencyContactName ?? "—"} />
+                <DItem label="Emergency Phone" value={selected.emergencyContactPhone ?? "—"} />
+                <DItem label="Current Location" value={selected.currentLocation ?? "—"} />
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Crew Table */}
-        <Card className="border-border/60">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/50 bg-muted/30">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Crew Member
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Role
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Depot
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Rest Period
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Duty Hours
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {crew?.map((member) => (
-                    <tr key={member._id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <div>
-                          <div className="font-medium text-foreground">{member.name}</div>
-                          <div className="text-xs text-muted-foreground">{member.crewId}</div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-foreground/80">{member.role}</td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1 text-foreground/80">
-                          <MapPin className="size-3 text-muted-foreground" />
-                          {member.assignedDepot}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusColors[member.availability] || ""}`}>
-                          {member.availability.replace("_", " ")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-foreground/80">{member.requiredRestPeriod}h</td>
-                      <td className="px-4 py-3 text-foreground/80">
-                        {member.dutyStartTime && member.dutyEndTime
-                          ? `${member.dutyStartTime} – ${member.dutyEndTime}`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDelete(member._id)}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </td>
+        {!selected && (
+          <Card className="border-border/60">
+            <CardContent className="p-0">
+              <div className="max-h-[500px] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+                    <tr className="border-b border-border/50">
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">ID</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Name</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Role</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Bus</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Route</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Shift</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {(!crew || crew.length === 0) && (
-                <div className="py-12 text-center text-sm text-muted-foreground">
-                  No crew members added yet. Click "Add Crew Member" to get started.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Rest Period Info */}
-        <Card className="border-border/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Clock className="size-4 text-primary" />
-              Rest Period Policy
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground">
-              <p>
-                The system automatically validates whether each crew member has received their
-                required rest period before confirming assignments. An assignment violating the
-                configured rest period will be blocked or flagged with a warning.
-              </p>
-              <p className="mt-2">
-                <strong className="text-foreground">Example:</strong> Crew C-104 completed duty at 22:00.
-                Required rest: 8 hours. Earliest next assignment: 06:00.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Create Dialog */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Crew Member</DialogTitle>
-              <DialogDescription>Add a new crew member to the system</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Crew ID</Label>
-                  <Input
-                    value={form.crewId}
-                    onChange={(e) => setForm({ ...form, crewId: e.target.value })}
-                    placeholder="C-109"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Full Name</Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="John Smith"
-                    className="mt-1"
-                  />
-                </div>
+                  </thead>
+                  <tbody className="divide-y divide-border/30">
+                    {filtered.map((c) => (
+                      <tr key={c._id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedCrewId(c.crewId)}>
+                        <td className="px-3 py-2.5 text-xs font-medium text-primary">{c.crewId}</td>
+                        <td className="px-3 py-2.5 font-medium text-foreground">{c.name}</td>
+                        <td className="px-3 py-2.5"><Badge variant={c.role === "Driver" ? "default" : "secondary"} className="text-[10px]">{c.role}</Badge></td>
+                        <td className="px-3 py-2.5 text-xs text-foreground/80">{c.assignedBus ?? "—"}</td>
+                        <td className="px-3 py-2.5 text-xs text-foreground/80">{c.assignedRoute ?? "—"}</td>
+                        <td className="px-3 py-2.5 text-xs text-foreground/80">{c.shift}</td>
+                        <td className="px-3 py-2.5"><Badge className={`text-[10px] ${dutyStatusColors[c.dutyStatus] || ""}`}>{c.dutyStatus.replace("_", " ")}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {filtered.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">No crew members found.</div>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Role</Label>
-                  <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Depot</Label>
-                  <Select value={form.assignedDepot} onValueChange={(v) => setForm({ ...form, assignedDepot: v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DEPOTS.map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Availability</Label>
-                  <Select value={form.availability} onValueChange={(v) => setForm({ ...form, availability: v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="on_duty">On Duty</SelectItem>
-                      <SelectItem value="resting">Resting</SelectItem>
-                      <SelectItem value="off_duty">Off Duty</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Rest Period (hours)</Label>
-                  <Input
-                    type="number"
-                    value={form.requiredRestPeriod}
-                    onChange={(e) => setForm({ ...form, requiredRestPeriod: Number(e.target.value) })}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Phone (optional)</Label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="555-0109"
-                  className="mt-1"
-                />
-              </div>
-              <Button onClick={handleCreate} className="w-full">
-                Add Crew Member
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
 }
 
-function MiniStat({
-  icon: Icon,
-  label,
-  value,
-  color,
-  bg,
-}: {
-  icon: any;
-  label: string;
-  value: number;
-  color: string;
-  bg: string;
-}) {
+function MiniStat({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
   return (
-    <Card className="border-border/60">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className={`flex size-9 items-center justify-center rounded-lg ${bg}`}>
-          <Icon className={`size-4 ${color}`} />
-        </div>
-        <div>
-          <div className="text-lg font-bold text-foreground">{value}</div>
-          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="rounded-xl border border-border/40 bg-muted/20 p-3 flex items-center gap-2.5">
+      <Icon className={`size-4 ${color}`} />
+      <div>
+        <div className="text-lg font-bold text-foreground">{value}</div>
+        <div className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function DItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-muted/30 p-2.5">
+      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-sm font-medium text-foreground">{value}</div>
+    </div>
   );
 }

@@ -53,7 +53,7 @@ export default function Dashboard() {
           <StatCard
             icon={Users}
             label="Crew Utilization"
-            value={`${stats?.crewUtilization ?? 0}%`}
+            value={`${stats?.fleetUtilization ?? 0}%`}
             sub={`${stats?.onDutyCrew ?? 0} of ${stats?.totalCrew ?? 0} on duty`}
             color="text-accent"
             bgColor="bg-accent/10"
@@ -62,7 +62,7 @@ export default function Dashboard() {
           <StatCard
             icon={Bus}
             label="Fleet Status"
-            value={stats?.activeBuses ?? 0}
+            value={stats?.onRouteBuses ?? 0}
             sub={`${stats?.availableBuses ?? 0} available, ${stats?.maintenanceBuses ?? 0} maintenance`}
             color="text-chart-3"
             bgColor="bg-chart-3/10"
@@ -72,7 +72,7 @@ export default function Dashboard() {
             icon={ShieldAlert}
             label="Open Conflicts"
             value={stats?.openConflicts ?? 0}
-            sub={`${stats?.resolvedConflicts ?? 0} resolved`}
+            sub={`${(stats?.totalConflicts ?? 0) - (stats?.openConflicts ?? 0)} resolved`}
             color="text-destructive"
             bgColor="bg-destructive/10"
             loading={isLoading}
@@ -203,12 +203,12 @@ export default function Dashboard() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Overall utilization</span>
-                    <span className="text-lg font-bold text-foreground">{stats.crewUtilization}%</span>
+                    <span className="text-lg font-bold text-foreground">{stats.fleetUtilization}%</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-700"
-                      style={{ width: `${stats.crewUtilization}%` }}
+                      style={{ width: `${stats.fleetUtilization}%` }}
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-3 pt-2">
@@ -221,7 +221,7 @@ export default function Dashboard() {
                       <div className="text-[10px] text-muted-foreground">Available</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-chart-4">{stats.restingCrew}</div>
+                      <div className="text-lg font-bold text-chart-4">{stats.offDutyCrew}</div>
                       <div className="text-[10px] text-muted-foreground">Resting</div>
                     </div>
                   </div>
@@ -246,12 +246,12 @@ export default function Dashboard() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Routes covered today</span>
-                    <span className="text-lg font-bold text-foreground">{stats.routeCoverage}%</span>
+                    <span className="text-lg font-bold text-foreground">{stats.fleetUtilization}%</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-accent to-chart-3 transition-all duration-700"
-                      style={{ width: `${stats.routeCoverage}%` }}
+                      style={{ width: `${stats.fleetUtilization}%` }}
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-3 pt-2">
@@ -260,7 +260,7 @@ export default function Dashboard() {
                       <div className="text-[10px] text-muted-foreground">Active Routes</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-foreground">{stats.totalDuties}</div>
+                      <div className="text-lg font-bold text-foreground">{stats.totalSchedules}</div>
                       <div className="text-[10px] text-muted-foreground">Scheduled Duties</div>
                     </div>
                     <div className="text-center">
@@ -291,10 +291,10 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <SummaryItem label="Crew Utilization" value={`${stats.crewUtilization}%`} icon={TrendingUp} />
-                <SummaryItem label="Route Coverage" value={`${stats.routeCoverage}%`} icon={Route} />
+                <SummaryItem label="Crew Utilization" value={`${stats.fleetUtilization}%`} icon={TrendingUp} />
+                <SummaryItem label="Route Coverage" value={`${stats.fleetUtilization}%`} icon={Route} />
                 <SummaryItem label="Scheduling Conflicts" value={`${stats.openConflicts}`} icon={AlertTriangle} />
-                <SummaryItem label="Active Buses" value={`${stats.activeBuses}`} icon={Bus} />
+                <SummaryItem label="Active Buses" value={`${stats.onRouteBuses}`} icon={Bus} />
               </div>
             )}
           </CardContent>
