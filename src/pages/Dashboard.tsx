@@ -35,7 +35,7 @@ export default function Dashboard() {
             Operations Dashboard
           </h1>
           <p className="text-sm text-muted-foreground">
-            Real-time overview of your bus network
+            Real-time overview of your Chennai bus network
           </p>
         </div>
 

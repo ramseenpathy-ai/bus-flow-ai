@@ -353,20 +353,41 @@ export const getFallbackSuggestions = query({
 export const seed = mutation({
   args: {},
   handler: async (ctx) => {
-    // Check if data already exists
-    const existingRoutes = await ctx.db.query("routes").first();
-    if (existingRoutes) return "Data already seeded";
+    // Check if Chennai routes already exist
+    const chennaiRoute21G = await ctx.db.query("routes").withIndex("by_routeId", (q) => q.eq("routeId", "21G")).first();
+    if (chennaiRoute21G) return "Chennai data already seeded";
 
-    // Seed routes
-    const routes = [
-      { routeId: "R-01", name: "Downtown Express", startPoint: "Central Station", endPoint: "City Hall", stops: ["Market St", "Library", "Plaza"], estimatedTravelTime: 35, status: "active" as const, coordinates: [{ lat: 40.7128, lng: -74.006 }, { lat: 40.7138, lng: -74.003 }, { lat: 40.7148, lng: -74.0 }] },
-      { routeId: "R-02", name: "Harbor Line", startPoint: "Ferry Terminal", endPoint: "Industrial Zone", stops: ["Pier 5", "Warehouse Dist", "Factory Row"], estimatedTravelTime: 45, status: "active" as const, coordinates: [{ lat: 40.6892, lng: -74.0445 }, { lat: 40.692, lng: -74.04 }, { lat: 40.695, lng: -74.035 }] },
-      { routeId: "R-03", name: "University Loop", startPoint: "University Gate", endPoint: "Student Union", stops: ["Science Block", "Arts Center", "Sports Complex"], estimatedTravelTime: 25, status: "active" as const, coordinates: [{ lat: 40.7291, lng: -73.9965 }, { lat: 40.7301, lng: -73.9945 }, { lat: 40.7311, lng: -73.9925 }] },
-      { routeId: "R-04", name: "Airport Shuttle", startPoint: "Main Station", endPoint: "Airport T2", stops: ["Highway Junction", "Terminal 1"], estimatedTravelTime: 60, status: "active" as const, coordinates: [{ lat: 40.7128, lng: -74.006 }, { lat: 40.6501, lng: -73.7781 }, { lat: 40.6413, lng: -73.7781 }] },
-      { routeId: "R-05", name: "Riverside Route", startPoint: "North Bridge", endPoint: "South Park", stops: ["River Walk", "Museum", "Botanic Garden"], estimatedTravelTime: 40, status: "proposed" as const, coordinates: [{ lat: 40.7359, lng: -73.9911 }, { lat: 40.7349, lng: -73.9891 }, { lat: 40.7339, lng: -73.9871 }] },
+    // Migrate: delete old demo routes if they exist
+    const allExistingRoutes = await ctx.db.query("routes").collect();
+    for (const oldRoute of allExistingRoutes) {
+      await ctx.db.delete(oldRoute._id);
+    }
+
+    // Chennai MTC Routes — 20 realistic default routes
+    const chennaiRoutes = [
+      { routeId: "21G", name: "Tambaram – Broadway", startPoint: "Tambaram", endPoint: "Broadway", stops: ["Tambaram", "Chromepet", "Pallavaram", "Guindy", "Saidapet", "T. Nagar", "Broadway"], estimatedTravelTime: 75, estimatedDistance: 30, routeType: "Ordinary", passengerLoad: "High", busCount: 12, coordinates: [{ lat: 12.9249, lng: 80.1000 }, { lat: 12.9500, lng: 80.1130 }, { lat: 12.9670, lng: 80.1350 }, { lat: 12.9825, lng: 80.1640 }, { lat: 13.0010, lng: 80.1900 }, { lat: 13.0390, lng: 80.2340 }, { lat: 13.0878, lng: 80.2785 }] },
+      { routeId: "29C", name: "Perambur – Besant Nagar", startPoint: "Perambur", endPoint: "Besant Nagar", stops: ["Perambur", "Ayanavaram", "Egmore", "Central", "Saidapet", "Adyar", "Besant Nagar"], estimatedTravelTime: 65, estimatedDistance: 20, routeType: "Ordinary", passengerLoad: "High", busCount: 9, coordinates: [{ lat: 13.1136, lng: 80.2337 }, { lat: 13.1020, lng: 80.2350 }, { lat: 13.0790, lng: 80.2550 }, { lat: 13.0800, lng: 80.2700 }, { lat: 13.0010, lng: 80.1900 }, { lat: 13.0062, lng: 80.2570 }, { lat: 12.9988, lng: 80.2676 }] },
+      { routeId: "51", name: "Tambaram – Velachery", startPoint: "Tambaram", endPoint: "Velachery", stops: ["Tambaram", "Camp Road", "Medavakkam", "Pallikaranai", "Velachery"], estimatedTravelTime: 55, estimatedDistance: 20, routeType: "Ordinary", passengerLoad: "Medium", busCount: 8, coordinates: [{ lat: 12.9249, lng: 80.1000 }, { lat: 12.9390, lng: 80.1200 }, { lat: 12.9600, lng: 80.1500 }, { lat: 12.9750, lng: 80.1800 }, { lat: 12.9815, lng: 80.2180 }] },
+      { routeId: "60A", name: "Royapuram – Kundrathur", startPoint: "Royapuram", endPoint: "Kundrathur", stops: ["Royapuram", "Parrys", "Central", "Saidapet", "Guindy", "St Thomas Mount", "Pallavaram", "Pammal", "Kundrathur"], estimatedTravelTime: 85, estimatedDistance: 30, routeType: "Ordinary", passengerLoad: "High", busCount: 10, coordinates: [{ lat: 13.1067, lng: 80.2866 }, { lat: 13.0890, lng: 80.2870 }, { lat: 13.0800, lng: 80.2700 }, { lat: 13.0010, lng: 80.1900 }, { lat: 12.9825, lng: 80.1640 }, { lat: 12.9870, lng: 80.1500 }, { lat: 12.9670, lng: 80.1350 }, { lat: 12.9480, lng: 80.1100 }, { lat: 12.9550, lng: 80.0790 }] },
+      { routeId: "102", name: "Island Ground – Kelambakkam", startPoint: "Island Ground", endPoint: "Kelambakkam", stops: ["Island Ground", "Secretariat", "Chepauk", "Adyar", "Indira Nagar", "SRP Tools", "Thoraipakkam", "Karapakkam", "Sholinganallur", "Semmancheri", "Navalur", "Kelambakkam"], estimatedTravelTime: 85, estimatedDistance: 35, routeType: "Express", passengerLoad: "High", busCount: 8, coordinates: [{ lat: 13.0820, lng: 80.2838 }, { lat: 13.0800, lng: 80.2800 }, { lat: 13.0680, lng: 80.2780 }, { lat: 13.0062, lng: 80.2570 }, { lat: 13.0030, lng: 80.2480 }, { lat: 12.9890, lng: 80.2460 }, { lat: 12.9700, lng: 80.2430 }, { lat: 12.9580, lng: 80.2420 }, { lat: 12.9100, lng: 80.2400 }, { lat: 12.8920, lng: 80.2430 }, { lat: 12.8780, lng: 80.2480 }, { lat: 12.8480, lng: 80.2550 }] },
+      { routeId: "M70", name: "Thiruvanmiyur – Koyambedu", startPoint: "Thiruvanmiyur", endPoint: "Koyambedu", stops: ["Thiruvanmiyur", "Adyar", "Guindy", "Ashok Nagar", "Vadapalani", "Koyambedu"], estimatedTravelTime: 55, estimatedDistance: 18, routeType: "M-Series / Express", passengerLoad: "High", busCount: 7, coordinates: [{ lat: 12.9828, lng: 80.2641 }, { lat: 13.0062, lng: 80.2570 }, { lat: 12.9825, lng: 80.1640 }, { lat: 13.0350, lng: 80.2110 }, { lat: 13.0490, lng: 80.2130 }, { lat: 13.0690, lng: 80.2230 }] },
+      { routeId: "E18", name: "Tambaram – Broadway (Express)", startPoint: "Tambaram", endPoint: "Broadway", stops: ["Tambaram", "Pallavaram", "Guindy", "Saidapet", "T. Nagar", "Broadway"], estimatedTravelTime: 70, estimatedDistance: 28, routeType: "Express", passengerLoad: "High", busCount: 9, coordinates: [{ lat: 12.9249, lng: 80.1000 }, { lat: 12.9670, lng: 80.1350 }, { lat: 12.9825, lng: 80.1640 }, { lat: 13.0010, lng: 80.1900 }, { lat: 13.0390, lng: 80.2340 }, { lat: 13.0878, lng: 80.2785 }] },
+      { routeId: "147B", name: "Mogappair West – T. Nagar", startPoint: "Mogappair West", endPoint: "T. Nagar", stops: ["Mogappair West", "Anna Nagar", "Aminjikarai", "Vadapalani", "Ashok Nagar", "T. Nagar"], estimatedTravelTime: 50, estimatedDistance: 15, routeType: "Ordinary", passengerLoad: "Medium", busCount: 6, coordinates: [{ lat: 13.0830, lng: 80.2050 }, { lat: 13.0730, lng: 80.2110 }, { lat: 13.0620, lng: 80.2140 }, { lat: 13.0490, lng: 80.2130 }, { lat: 13.0350, lng: 80.2110 }, { lat: 13.0390, lng: 80.2340 }] },
+      { routeId: "147C", name: "T. Nagar – Ambattur OT", startPoint: "T. Nagar", endPoint: "Ambattur OT", stops: ["T. Nagar", "Vadapalani", "Anna Nagar", "Mogappair", "Ambattur"], estimatedTravelTime: 55, estimatedDistance: 18, routeType: "Ordinary", passengerLoad: "Medium", busCount: 7, coordinates: [{ lat: 13.0390, lng: 80.2340 }, { lat: 13.0490, lng: 80.2130 }, { lat: 13.0730, lng: 80.2110 }, { lat: 13.0830, lng: 80.2050 }, { lat: 13.0970, lng: 80.1930 }] },
+      { routeId: "57F", name: "Broadway – Karanodai", startPoint: "Broadway", endPoint: "Karanodai", stops: ["Broadway", "Central", "Perambur", "Madhavaram", "Red Hills", "Karanodai"], estimatedTravelTime: 80, estimatedDistance: 30, routeType: "Ordinary", passengerLoad: "Medium", busCount: 6, coordinates: [{ lat: 13.0878, lng: 80.2785 }, { lat: 13.0800, lng: 80.2700 }, { lat: 13.1136, lng: 80.2337 }, { lat: 13.1350, lng: 80.2150 }, { lat: 13.1580, lng: 80.2000 }, { lat: 13.1900, lng: 80.1850 }] },
+      { routeId: "64C", name: "Manali – Broadway", startPoint: "Manali", endPoint: "Broadway", stops: ["Manali", "Madhavaram", "Tondiarpet", "Royapuram", "Broadway"], estimatedTravelTime: 60, estimatedDistance: 22, routeType: "Ordinary", passengerLoad: "High", busCount: 7, coordinates: [{ lat: 13.1550, lng: 80.2600 }, { lat: 13.1350, lng: 80.2150 }, { lat: 13.1130, lng: 80.2780 }, { lat: 13.1067, lng: 80.2866 }, { lat: 13.0878, lng: 80.2785 }] },
+      { routeId: "95", name: "Tambaram – Thiruvanmiyur", startPoint: "Tambaram", endPoint: "Thiruvanmiyur", stops: ["Tambaram", "Pallikaranai", "Velachery", "Taramani", "Thiruvanmiyur"], estimatedTravelTime: 65, estimatedDistance: 24, routeType: "Ordinary", passengerLoad: "Medium", busCount: 6, coordinates: [{ lat: 12.9249, lng: 80.1000 }, { lat: 12.9750, lng: 80.1800 }, { lat: 12.9815, lng: 80.2180 }, { lat: 12.9880, lng: 80.2440 }, { lat: 12.9828, lng: 80.2641 }] },
+      { routeId: "99", name: "Tambaram – Adyar", startPoint: "Tambaram", endPoint: "Adyar", stops: ["Tambaram", "Chromepet", "Pallavaram", "Guindy", "Saidapet", "Adyar"], estimatedTravelTime: 65, estimatedDistance: 25, routeType: "Ordinary", passengerLoad: "High", busCount: 8, coordinates: [{ lat: 12.9249, lng: 80.1000 }, { lat: 12.9500, lng: 80.1130 }, { lat: 12.9670, lng: 80.1350 }, { lat: 12.9825, lng: 80.1640 }, { lat: 13.0010, lng: 80.1900 }, { lat: 13.0062, lng: 80.2570 }] },
+      { routeId: "101", name: "Poonamallee – Thiruvotriyur", startPoint: "Poonamallee", endPoint: "Thiruvotriyur", stops: ["Poonamallee", "Porur", "Vadapalani", "Koyambedu", "Central", "Broadway", "Tondiarpet", "Thiruvotriyur"], estimatedTravelTime: 90, estimatedDistance: 35, routeType: "Ordinary", passengerLoad: "High", busCount: 9, coordinates: [{ lat: 13.0470, lng: 80.0970 }, { lat: 13.0380, lng: 80.1520 }, { lat: 13.0490, lng: 80.2130 }, { lat: 13.0690, lng: 80.2230 }, { lat: 13.0800, lng: 80.2700 }, { lat: 13.0878, lng: 80.2785 }, { lat: 13.1130, lng: 80.2780 }, { lat: 13.1270, lng: 80.2860 }] },
+      { routeId: "121F", name: "Tambaram – Kannagi Nagar", startPoint: "Tambaram", endPoint: "Kannagi Nagar", stops: ["Tambaram", "Pallikaranai", "Velachery", "Sholinganallur", "Semmancheri", "Kannagi Nagar"], estimatedTravelTime: 75, estimatedDistance: 30, routeType: "Ordinary", passengerLoad: "High", busCount: 7, coordinates: [{ lat: 12.9249, lng: 80.1000 }, { lat: 12.9750, lng: 80.1800 }, { lat: 12.9815, lng: 80.2180 }, { lat: 12.9100, lng: 80.2400 }, { lat: 12.8920, lng: 80.2430 }, { lat: 12.8750, lng: 80.2380 }] },
+      { routeId: "25G", name: "Poonamallee – Kodambakkam", startPoint: "Poonamallee", endPoint: "Kodambakkam", stops: ["Poonamallee", "Porur", "Valasaravakkam", "Saligramam", "Kodambakkam"], estimatedTravelTime: 55, estimatedDistance: 18, routeType: "Ordinary", passengerLoad: "Medium", busCount: 6, coordinates: [{ lat: 13.0470, lng: 80.0970 }, { lat: 13.0380, lng: 80.1520 }, { lat: 13.0350, lng: 80.1800 }, { lat: 13.0430, lng: 80.1980 }, { lat: 13.0460, lng: 80.2080 }] },
+      { routeId: "28", name: "Egmore – Thiruvotriyur", startPoint: "Egmore", endPoint: "Thiruvotriyur", stops: ["Egmore", "Central", "Washermenpet", "Tondiarpet", "Thiruvotriyur"], estimatedTravelTime: 50, estimatedDistance: 17, routeType: "Ordinary", passengerLoad: "High", busCount: 8, coordinates: [{ lat: 13.0790, lng: 80.2550 }, { lat: 13.0800, lng: 80.2700 }, { lat: 13.1000, lng: 80.2780 }, { lat: 13.1130, lng: 80.2780 }, { lat: 13.1270, lng: 80.2860 }] },
+      { routeId: "D70", name: "Velachery – Ambattur Industrial Estate", startPoint: "Velachery", endPoint: "Ambattur Industrial Estate", stops: ["Velachery", "Guindy", "Ashok Nagar", "Vadapalani", "Anna Nagar", "Ambattur"], estimatedTravelTime: 70, estimatedDistance: 25, routeType: "Deluxe", passengerLoad: "Medium", busCount: 5, coordinates: [{ lat: 12.9815, lng: 80.2180 }, { lat: 12.9825, lng: 80.1640 }, { lat: 13.0350, lng: 80.2110 }, { lat: 13.0490, lng: 80.2130 }, { lat: 13.0730, lng: 80.2110 }, { lat: 13.0970, lng: 80.1930 }] },
+      { routeId: "M1", name: "Keelkattalai – Thiruvanmiyur", startPoint: "Keelkattalai", endPoint: "Thiruvanmiyur", stops: ["Keelkattalai", "Madipakkam", "Velachery", "Taramani", "Thiruvanmiyur"], estimatedTravelTime: 45, estimatedDistance: 15, routeType: "M-Series", passengerLoad: "Medium", busCount: 5, coordinates: [{ lat: 12.9680, lng: 80.1900 }, { lat: 12.9730, lng: 80.2030 }, { lat: 12.9815, lng: 80.2180 }, { lat: 12.9880, lng: 80.2440 }, { lat: 12.9828, lng: 80.2641 }] },
+      { routeId: "588", name: "Adyar – Mamallapuram", startPoint: "Adyar", endPoint: "Mamallapuram", stops: ["Adyar", "Thiruvanmiyur", "Sholinganallur", "Kelambakkam", "Kovalam", "Mamallapuram"], estimatedTravelTime: 90, estimatedDistance: 43, routeType: "Express", passengerLoad: "Medium", busCount: 4, coordinates: [{ lat: 13.0062, lng: 80.2570 }, { lat: 12.9828, lng: 80.2641 }, { lat: 12.9100, lng: 80.2400 }, { lat: 12.8480, lng: 80.2550 }, { lat: 12.8000, lng: 80.2400 }, { lat: 12.6167, lng: 80.1990 }] },
     ];
 
-    for (const route of routes) {
+    for (const route of chennaiRoutes) {
       await ctx.db.insert("routes", {
         routeId: route.routeId,
         name: route.name,
@@ -374,39 +395,43 @@ export const seed = mutation({
         endPoint: route.endPoint,
         stops: route.stops,
         estimatedTravelTime: route.estimatedTravelTime,
-        status: route.status,
+        estimatedDistance: route.estimatedDistance,
+        routeType: route.routeType,
+        passengerLoad: route.passengerLoad,
+        busCount: route.busCount,
+        status: "active" as const,
         coordinates: route.coordinates,
         operatingHours: { start: "06:00", end: "22:00" },
         createdBy: "system",
       });
     }
 
-    // Seed crew
+    // Seed crew — Chennai MTC depot staff
     const crewMembers = [
-      { crewId: "C-101", name: "Alex Johnson", role: "Driver", assignedDepot: "Central Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "555-0101" },
-      { crewId: "C-102", name: "Maria Garcia", role: "Driver", assignedDepot: "Central Depot", availability: "on_duty" as const, dutyStartTime: "06:00", dutyEndTime: "14:00", requiredRestPeriod: 8, phone: "555-0102" },
-      { crewId: "C-103", name: "James Wilson", role: "Conductor", assignedDepot: "Harbor Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "555-0103" },
-      { crewId: "C-104", name: "Sarah Lee", role: "Driver", assignedDepot: "Central Depot", availability: "resting" as const, lastCompletedDuty: Date.now() - 6 * 60 * 60 * 1000, dutyStartTime: "22:00", dutyEndTime: "06:00", requiredRestPeriod: 8, phone: "555-0104" },
-      { crewId: "C-105", name: "David Brown", role: "Driver", assignedDepot: "University Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "555-0105" },
-      { crewId: "C-106", name: "Emma Davis", role: "Conductor", assignedDepot: "Central Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "555-0106" },
-      { crewId: "C-107", name: "Robert Martinez", role: "Driver", assignedDepot: "Airport Depot", availability: "on_duty" as const, dutyStartTime: "08:00", dutyEndTime: "16:00", requiredRestPeriod: 8, phone: "555-0107" },
-      { crewId: "C-108", name: "Jennifer Taylor", role: "Driver", assignedDepot: "Central Depot", availability: "off_duty" as const, requiredRestPeriod: 8, phone: "555-0108" },
+      { crewId: "C-101", name: "Ravi Kumar", role: "Driver", assignedDepot: "Tambaram Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "98401-00101" },
+      { crewId: "C-102", name: "Priya Sharma", role: "Driver", assignedDepot: "Tambaram Depot", availability: "on_duty" as const, dutyStartTime: "06:00", dutyEndTime: "14:00", requiredRestPeriod: 8, phone: "98401-00102" },
+      { crewId: "C-103", name: "Suresh Rajan", role: "Conductor", assignedDepot: "Koyambedu Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "98401-00103" },
+      { crewId: "C-104", name: "Lakshmi Narayanan", role: "Driver", assignedDepot: "Central Depot", availability: "resting" as const, lastCompletedDuty: Date.now() - 6 * 60 * 60 * 1000, dutyStartTime: "22:00", dutyEndTime: "06:00", requiredRestPeriod: 8, phone: "98401-00104" },
+      { crewId: "C-105", name: "Vikram Mohan", role: "Driver", assignedDepot: "Tondiarpet Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "98401-00105" },
+      { crewId: "C-106", name: "Anitha Devi", role: "Conductor", assignedDepot: "Central Depot", availability: "available" as const, requiredRestPeriod: 8, phone: "98401-00106" },
+      { crewId: "C-107", name: "Karthik Srinivasan", role: "Driver", assignedDepot: "Tondiarpet Depot", availability: "on_duty" as const, dutyStartTime: "08:00", dutyEndTime: "16:00", requiredRestPeriod: 8, phone: "98401-00107" },
+      { crewId: "C-108", name: "Meena Kumari", role: "Driver", assignedDepot: "Adyar Depot", availability: "off_duty" as const, requiredRestPeriod: 8, phone: "98401-00108" },
     ];
 
     for (const crew of crewMembers) {
       await ctx.db.insert("crew", { ...crew, currentAssignment: undefined });
     }
 
-    // Seed buses
+    // Seed buses — Chennai MTC fleet
     const buses = [
-      { busId: "B-001", capacity: 45, currentStatus: "available" as const, depot: "Central Depot" },
-      { busId: "B-002", capacity: 45, currentStatus: "on_route" as const, depot: "Central Depot", assignedRoute: "R-01", assignedDuty: undefined },
-      { busId: "B-003", capacity: 40, currentStatus: "available" as const, depot: "Harbor Depot" },
-      { busId: "B-004", capacity: 50, currentStatus: "maintenance" as const, depot: "Central Depot", maintenanceStatus: "Scheduled brake service" },
-      { busId: "B-005", capacity: 40, currentStatus: "available" as const, depot: "University Depot" },
-      { busId: "B-006", capacity: 50, currentStatus: "available" as const, depot: "Airport Depot" },
-      { busId: "B-007", capacity: 35, currentStatus: "on_route" as const, depot: "Central Depot", assignedRoute: "R-03" },
-      { busId: "B-008", capacity: 45, currentStatus: "available" as const, depot: "Central Depot" },
+      { busId: "TN-01-A-0001", capacity: 50, currentStatus: "available" as const, depot: "Tambaram Depot" },
+      { busId: "TN-01-A-0002", capacity: 50, currentStatus: "on_route" as const, depot: "Tambaram Depot", assignedRoute: "21G", assignedDuty: undefined },
+      { busId: "TN-01-A-0003", capacity: 45, currentStatus: "available" as const, depot: "Koyambedu Depot" },
+      { busId: "TN-01-A-0004", capacity: 55, currentStatus: "maintenance" as const, depot: "Central Depot", maintenanceStatus: "Scheduled brake service" },
+      { busId: "TN-01-A-0005", capacity: 45, currentStatus: "available" as const, depot: "Tondiarpet Depot" },
+      { busId: "TN-01-A-0006", capacity: 50, currentStatus: "available" as const, depot: "Adyar Depot" },
+      { busId: "TN-01-A-0007", capacity: 40, currentStatus: "on_route" as const, depot: "Koyambedu Depot", assignedRoute: "M70" },
+      { busId: "TN-01-A-0008", capacity: 50, currentStatus: "available" as const, depot: "Central Depot" },
     ];
 
     for (const bus of buses) {
@@ -420,12 +445,12 @@ export const seed = mutation({
     // Seed duties
     const today = new Date().toISOString().split("T")[0];
     const duties = [
-      { routeId: "R-01", busId: "B-002", crewId: "C-102", startTime: "06:00", endTime: "14:00", mode: "linked" as const, date: today },
-      { routeId: "R-01", busId: "B-001", crewId: "C-101", startTime: "14:00", endTime: "22:00", mode: "linked" as const, date: today },
-      { routeId: "R-02", busId: "B-003", crewId: "C-103", startTime: "06:00", endTime: "14:00", mode: "linked" as const, date: today },
-      { routeId: "R-03", busId: "B-007", crewId: "C-105", startTime: "08:00", endTime: "16:00", mode: "linked" as const, date: today },
-      { routeId: "R-04", busId: "B-006", crewId: "C-107", startTime: "06:00", endTime: "14:00", mode: "unlinked" as const, date: today },
-      { routeId: "R-05", busId: undefined, crewId: undefined, startTime: "10:00", endTime: "16:00", mode: "unlinked" as const, date: today },
+      { routeId: "21G", busId: "TN-01-A-0002", crewId: "C-102", startTime: "06:00", endTime: "14:00", mode: "linked" as const, date: today },
+      { routeId: "21G", busId: "TN-01-A-0001", crewId: "C-101", startTime: "14:00", endTime: "22:00", mode: "linked" as const, date: today },
+      { routeId: "29C", busId: "TN-01-A-0003", crewId: "C-103", startTime: "06:00", endTime: "14:00", mode: "linked" as const, date: today },
+      { routeId: "M70", busId: "TN-01-A-0007", crewId: "C-105", startTime: "08:00", endTime: "16:00", mode: "linked" as const, date: today },
+      { routeId: "102", busId: "TN-01-A-0006", crewId: "C-107", startTime: "06:00", endTime: "14:00", mode: "unlinked" as const, date: today },
+      { routeId: "D70", busId: undefined, crewId: undefined, startTime: "10:00", endTime: "16:00", mode: "unlinked" as const, date: today },
     ];
 
     for (const duty of duties) {

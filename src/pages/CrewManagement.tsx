@@ -81,7 +81,7 @@ export default function CrewManagement() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: any) => {
     await deleteCrew({ id });
     toast.success("Crew member removed");
   };

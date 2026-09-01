@@ -101,7 +101,7 @@ export default function Scheduling() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: any) => {
     await deleteDuty({ id });
     toast.success("Duty removed");
   };

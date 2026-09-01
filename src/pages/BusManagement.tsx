@@ -75,12 +75,12 @@ export default function BusManagement() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: any) => {
     await deleteBus({ id });
     toast.success("Bus removed from fleet");
   };
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const handleStatusChange = async (id: any, status: string) => {
     await updateBus({ id, currentStatus: status });
     toast.success("Status updated");
   };

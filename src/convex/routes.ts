@@ -41,6 +41,10 @@ export const create = mutation({
     endPoint: v.string(),
     stops: v.array(v.string()),
     estimatedTravelTime: v.number(),
+    estimatedDistance: v.optional(v.number()),
+    routeType: v.optional(v.string()),
+    passengerLoad: v.optional(v.string()),
+    busCount: v.optional(v.number()),
     operatingHours: v.object({
       start: v.string(),
       end: v.string(),
@@ -73,6 +77,10 @@ export const update = mutation({
     endPoint: v.optional(v.string()),
     stops: v.optional(v.array(v.string())),
     estimatedTravelTime: v.optional(v.number()),
+    estimatedDistance: v.optional(v.number()),
+    routeType: v.optional(v.string()),
+    passengerLoad: v.optional(v.string()),
+    busCount: v.optional(v.number()),
     operatingHours: v.optional(v.object({
       start: v.string(),
       end: v.string(),

@@ -125,12 +125,16 @@ const schema = defineSchema(
 
     // Bus routes
     routes: defineTable({
-      routeId: v.string(), // e.g. "R-01"
-      name: v.string(), // e.g. "Downtown Express"
+      routeId: v.string(), // e.g. "21G"
+      name: v.string(), // e.g. "Tambaram – Broadway"
       startPoint: v.string(),
       endPoint: v.string(),
       stops: v.array(v.string()),
       estimatedTravelTime: v.number(), // minutes
+      estimatedDistance: v.optional(v.number()), // km
+      routeType: v.optional(v.string()), // Ordinary, Express, Deluxe, M-Series
+      passengerLoad: v.optional(v.string()), // High, Medium, Low
+      busCount: v.optional(v.number()), // current bus count
       operatingHours: v.object({
         start: v.string(), // "06:00"
         end: v.string(),   // "22:00"
