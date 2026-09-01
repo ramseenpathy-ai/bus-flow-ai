@@ -12,6 +12,11 @@ import "./index.css";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const RouteManagement = lazy(() => import("./pages/RouteManagement.tsx"));
+const CrewManagement = lazy(() => import("./pages/CrewManagement.tsx"));
+const BusManagement = lazy(() => import("./pages/BusManagement.tsx"));
+const Scheduling = lazy(() => import("./pages/Scheduling.tsx"));
+const Conflicts = lazy(() => import("./pages/Conflicts.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -81,8 +86,6 @@ class RootErrorBoundary extends React.Component<
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-
-
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -106,7 +109,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -128,6 +130,46 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/routes"
+                element={
+                  <RequireAuth>
+                    <RouteManagement />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/crew"
+                element={
+                  <RequireAuth>
+                    <CrewManagement />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/buses"
+                element={
+                  <RequireAuth>
+                    <BusManagement />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/scheduling"
+                element={
+                  <RequireAuth>
+                    <Scheduling />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/conflicts"
+                element={
+                  <RequireAuth>
+                    <Conflicts />
                   </RequireAuth>
                 }
               />
