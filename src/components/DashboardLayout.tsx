@@ -13,9 +13,9 @@ import {
   LogOut,
   Menu,
   X,
+  Bell,
+  AlertCircle,
 } from "lucide-react";
-
-import { Bell, AlertCircle } from "lucide-react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
@@ -24,8 +24,11 @@ const navItems = [
   { icon: Bus, label: "Buses", path: "/dashboard/buses" },
   { icon: CalendarClock, label: "Scheduling", path: "/dashboard/scheduling" },
   { icon: ShieldAlert, label: "Conflicts", path: "/dashboard/conflicts" },
-  { icon: Bell, label: "Emergency", path: "/dashboard/emergency" },
-  { icon: AlertCircle, label: "Incidents", path: "/dashboard/incidents" },
+];
+
+const emergencyNavItems = [
+  { icon: Bell, label: "Emergency Alerts", path: "/dashboard/emergency" },
+  { icon: AlertCircle, label: "Incident Reporting", path: "/dashboard/incidents" },
 ];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -58,8 +61,24 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-2">
+        <nav className="flex-1 space-y-1 px-3 py-2 overflow-y-auto">
           {navItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                isActive(item.path)
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              }`}
+            >
+              <item.icon className="size-4 shrink-0" />
+              {item.label}
+            </button>
+          ))}
+          <div className="my-2 border-t border-sidebar-border/40" />
+          <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">Operations</div>
+          {emergencyNavItems.map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
@@ -117,18 +136,27 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {mobileOpen && (
-          <div className="border-b border-border bg-card px-4 py-2">
+          <div className="border-b border-border bg-card px-4 py-2 max-h-[70vh] overflow-y-auto">
             {navItems.map((item) => (
               <button
                 key={item.path}
-                onClick={() => {
-                  navigate(item.path);
-                  setMobileOpen(false);
-                }}
+                onClick={() => { navigate(item.path); setMobileOpen(false); }}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  isActive(item.path)
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  isActive(item.path) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <item.icon className="size-4 shrink-0" />
+                {item.label}
+              </button>
+            ))}
+            <div className="my-1 border-t border-border/40" />
+            <div className="px-3 py-1 text-[10px] font-semibold uppercase text-muted-foreground/50">Operations</div>
+            {emergencyNavItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  isActive(item.path) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <item.icon className="size-4 shrink-0" />
