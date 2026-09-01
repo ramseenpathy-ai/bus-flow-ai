@@ -5,13 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { NetworkMap } from "@/components/NetworkMap";
 import { useNavigate } from "react-router";
-import { Route, Users, Bus, ShieldAlert, TrendingUp, Link2, Unlink, AlertTriangle, Activity, CheckCircle2 } from "lucide-react";
+import { Route, Users, Bus, ShieldAlert, TrendingUp, Link2, Unlink, AlertTriangle, Activity, CheckCircle2, Bell, AlertCircle } from "lucide-react";
 
 export default function Dashboard() {
   const ops = useQuery(api.logic.opsSummary);
   const routes = useQuery(api.routes.list);
   const routeSchedule = useQuery(api.logic.routeScheduleView);
   const conflicts = useQuery(api.scheduling.detectConflicts, { date: new Date().toISOString().split("T")[0] });
+  const alertStats = useQuery(api.alerts.stats);
+  const incStats = useQuery(api.incidents.stats);
   const navigate = useNavigate();
 
   const isLoading = !ops;
@@ -204,6 +206,36 @@ export default function Dashboard() {
             </Card>
           </div>
         )}
+
+        {/* Emergency & Incident Summary */}
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Card className="border-border/60 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/dashboard/emergency")}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2"><Bell className="size-4 text-destructive" />Emergency Alerts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div><div className="text-lg font-bold text-destructive">{alertStats?.activeEmergencies ?? 0}</div><div className="text-[9px] text-muted-foreground">Active</div></div>
+                <div><div className="text-lg font-bold text-orange-600">{alertStats?.criticalAlerts ?? 0}</div><div className="text-[9px] text-muted-foreground">Critical</div></div>
+                <div><div className="text-lg font-bold text-primary">{alertStats?.busesAffected ?? 0}</div><div className="text-[9px] text-muted-foreground">Buses</div></div>
+                <div><div className="text-lg font-bold text-destructive">{alertStats?.unacknowledgedAlerts ?? 0}</div><div className="text-[9px] text-muted-foreground">Unack.</div></div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/dashboard/incidents")}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2"><AlertCircle className="size-4 text-orange-600" />Incident Reporting</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div><div className="text-lg font-bold text-orange-600">{incStats?.newIncidents ?? 0}</div><div className="text-[9px] text-muted-foreground">New</div></div>
+                <div><div className="text-lg font-bold text-destructive">{incStats?.critical ?? 0}</div><div className="text-[9px] text-muted-foreground">Critical</div></div>
+                <div><div className="text-lg font-bold text-primary">{incStats?.busesInDistress ?? 0}</div><div className="text-[9px] text-muted-foreground">Buses</div></div>
+                <div><div className="text-lg font-bold text-accent">{incStats?.resolved ?? 0}</div><div className="text-[9px] text-muted-foreground">Resolved</div></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

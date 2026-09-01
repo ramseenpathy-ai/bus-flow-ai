@@ -15,6 +15,8 @@ import {
   X,
 } from "lucide-react";
 
+import { Bell, AlertCircle } from "lucide-react";
+
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
   { icon: Route, label: "Routes", path: "/dashboard/routes" },
@@ -22,6 +24,8 @@ const navItems = [
   { icon: Bus, label: "Buses", path: "/dashboard/buses" },
   { icon: CalendarClock, label: "Scheduling", path: "/dashboard/scheduling" },
   { icon: ShieldAlert, label: "Conflicts", path: "/dashboard/conflicts" },
+  { icon: Bell, label: "Emergency", path: "/dashboard/emergency" },
+  { icon: AlertCircle, label: "Incidents", path: "/dashboard/incidents" },
 ];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {

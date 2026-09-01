@@ -17,6 +17,8 @@ const CrewManagement = lazy(() => import("./pages/CrewManagement.tsx"));
 const BusManagement = lazy(() => import("./pages/BusManagement.tsx"));
 const Scheduling = lazy(() => import("./pages/Scheduling.tsx"));
 const Conflicts = lazy(() => import("./pages/Conflicts.tsx"));
+const EmergencyAlerts = lazy(() => import("./pages/EmergencyAlerts.tsx"));
+const IncidentReporting = lazy(() => import("./pages/IncidentReporting.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -170,6 +172,22 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Conflicts />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/emergency"
+                element={
+                  <RequireAuth>
+                    <EmergencyAlerts />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/incidents"
+                element={
+                  <RequireAuth>
+                    <IncidentReporting />
                   </RequireAuth>
                 }
               />

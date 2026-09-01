@@ -174,6 +174,56 @@ const schema = defineSchema(
       .index("by_category", ["category"])
       .index("by_severity", ["severity"])
       .index("by_status", ["status"]),
+
+    // ── Emergency Alerts ────────────────────────────────────────────────
+    alerts: defineTable({
+      alertId: v.string(),
+      alertType: v.string(),
+      severity: v.string(),
+      routeId: v.string(),
+      busId: v.optional(v.string()),
+      driverId: v.optional(v.string()),
+      affectedLocation: v.string(),
+      affectedStops: v.array(v.string()),
+      message: v.string(),
+      createdBy: v.string(),
+      createdTime: v.string(),
+      expiresAt: v.optional(v.string()),
+      status: v.string(),
+      driverDelivered: v.optional(v.boolean()),
+      driverAcknowledged: v.optional(v.boolean()),
+      driverAckTime: v.optional(v.string()),
+      passengerDelivered: v.optional(v.boolean()),
+      escalationRequired: v.optional(v.boolean()),
+    })
+      .index("by_status", ["status"])
+      .index("by_severity", ["severity"])
+      .index("by_route", ["routeId"]),
+
+    // ── Incidents ───────────────────────────────────────────────────────
+    incidents: defineTable({
+      incidentId: v.string(),
+      incidentType: v.string(),
+      severity: v.string(),
+      reporterType: v.string(),
+      reporterId: v.optional(v.string()),
+      busId: v.string(),
+      routeId: v.string(),
+      driverId: v.optional(v.string()),
+      location: v.string(),
+      description: v.string(),
+      reportedTime: v.string(),
+      status: v.string(),
+      assignedOperator: v.optional(v.string()),
+      resolution: v.optional(v.string()),
+      resolutionTime: v.optional(v.string()),
+      acknowledgedTime: v.optional(v.string()),
+      responseInitiatedTime: v.optional(v.string()),
+      closedTime: v.optional(v.string()),
+    })
+      .index("by_status", ["status"])
+      .index("by_severity", ["severity"])
+      .index("by_bus", ["busId"]),
   },
   {
     schemaValidation: false,
