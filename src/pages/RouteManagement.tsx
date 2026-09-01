@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -33,9 +33,25 @@ type SortKey = "routeId" | "name" | "startPoint" | "endPoint" | "estimatedTravel
 
 export default function RouteManagement() {
   const routes = useQuery(api.routes.list);
+  const routeVerify = useQuery(api.routeMigration.verifyRoutes);
+  const migrateToChennai = useMutation(api.routeMigration.migrateToChennai);
   const createRoute = useMutation(api.routes.create);
   const updateRoute = useMutation(api.routes.update);
   const deleteRoute = useMutation(api.routes.remove);
+  const hasMigrated = useRef(false);
+
+  // Auto-migrate: if database doesn't have Chennai routes, run migration
+  useEffect(() => {
+    if (routeVerify && !routeVerify.hasChennaiRoutes && !hasMigrated.current) {
+      hasMigrated.current = true;
+      migrateToChennai().then((result) => {
+        toast.success(String(result));
+      }).catch((err: any) => {
+        toast.error(err.message || "Migration failed");
+        hasMigrated.current = false;
+      });
+    }
+  }, [routeVerify, migrateToChennai]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
