@@ -3,6 +3,12 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useCallback } from "react";
 
+/**
+ * The Freebuff platform injects a federated JWT that makes useConvexAuth()
+ * return isAuthenticated=true immediately. We track whether the user has
+ * explicitly chosen a sign-in method (email or guest) to prevent the
+ * platform's auto-auth from gating access to the dashboard.
+ */
 const AUTHORIZED_KEY = "busflow_explicit_auth";
 
 function hasExplicitAuth(): boolean {
@@ -30,10 +36,13 @@ export function useAuth() {
   const user = useQuery(api.users.currentUser);
   const { signIn: rawSignIn, signOut: rawSignOut } = useAuthActions();
 
-  // Derive isLoading directly from the dependencies instead of managing separate state
   const isLoading = isAuthLoading || user === undefined;
 
-  // Only consider the user explicitly authenticated if they signed in via email
+  /**
+   * Only treat the user as authenticated when they have explicitly chosen
+   * a sign-in method. Platform auto-auth (federated JWT) is intentionally
+   * ignored here so that the auth page can present its two choices first.
+   */
   const isExplicitlyAuthenticated = isAuthenticated && hasExplicitAuth();
 
   const signIn = useCallback(
