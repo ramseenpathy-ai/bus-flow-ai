@@ -147,10 +147,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   onClick={() => navigate("/")}
                 />
               </div>
-              <CardTitle className="text-xl font-bold tracking-tight font-display">
+              <CardTitle className="text-xl font-bold tracking-tight">
                 Welcome to Bus Flow AI
               </CardTitle>
-              <CardDescription className="font-body">
+              <CardDescription>
                 Chennai City Bus Control Room
               </CardDescription>
             </CardHeader>
