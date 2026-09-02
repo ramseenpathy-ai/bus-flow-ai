@@ -1,9 +1,8 @@
-/* DO NOT CHANGE */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
 
-/* DO NOT CHANGE */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -40,76 +39,44 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: 'Instrument Serif', serif;
+  --font-body: 'Inter', sans-serif;
 }
 
-/* BusFlow AI — Modern Transport Theme */
+/* BusFlow AI — Modern Control Room Theme */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.98 0.002 260);
-  --foreground: oklch(0.18 0.01 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.01 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.01 260);
-  --primary: oklch(0.42 0.14 235);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.96 0.005 235);
-  --secondary-foreground: oklch(0.25 0.02 235);
-  --muted: oklch(0.96 0.003 260);
-  --muted-foreground: oklch(0.52 0.01 260);
-  --accent: oklch(0.58 0.12 185);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.005 260);
-  --input: oklch(0.91 0.005 260);
-  --ring: oklch(0.42 0.14 235);
-  --chart-1: oklch(0.42 0.14 235);
-  --chart-2: oklch(0.58 0.12 185);
-  --chart-3: oklch(0.65 0.17 155);
-  --chart-4: oklch(0.72 0.14 50);
-  --chart-5: oklch(0.60 0.18 310);
-  --sidebar: oklch(0.18 0.015 235);
-  --sidebar-foreground: oklch(0.92 0.005 235);
-  --sidebar-primary: oklch(0.58 0.12 185);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.22 0.02 235);
-  --sidebar-accent-foreground: oklch(0.92 0.005 235);
-  --sidebar-border: oklch(0.25 0.02 235);
-  --sidebar-ring: oklch(0.42 0.14 235);
-}
-
-.dark {
-  --background: oklch(0.14 0.01 260);
-  --foreground: oklch(0.93 0.005 260);
-  --card: oklch(0.18 0.012 260);
-  --card-foreground: oklch(0.93 0.005 260);
-  --popover: oklch(0.18 0.012 260);
-  --popover-foreground: oklch(0.93 0.005 260);
-  --primary: oklch(0.60 0.14 235);
-  --primary-foreground: oklch(0.14 0.01 260);
-  --secondary: oklch(0.22 0.015 235);
-  --secondary-foreground: oklch(0.93 0.005 260);
-  --muted: oklch(0.22 0.01 260);
-  --muted-foreground: oklch(0.62 0.01 260);
-  --accent: oklch(0.55 0.10 185);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.26 0.012 260);
-  --input: oklch(0.26 0.012 260);
-  --ring: oklch(0.60 0.14 235);
-  --chart-1: oklch(0.60 0.14 235);
-  --chart-2: oklch(0.55 0.10 185);
-  --chart-3: oklch(0.65 0.17 155);
-  --chart-4: oklch(0.72 0.14 50);
-  --chart-5: oklch(0.60 0.18 310);
-  --sidebar: oklch(0.12 0.015 235);
-  --sidebar-foreground: oklch(0.88 0.005 235);
-  --sidebar-primary: oklch(0.55 0.10 185);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.16 0.02 235);
-  --sidebar-accent-foreground: oklch(0.88 0.005 235);
-  --sidebar-border: oklch(0.22 0.02 235);
-  --sidebar-ring: oklch(0.60 0.14 235);
+  --radius: 0.5rem;
+  --background: 0 0% 100%;
+  --foreground: 210 14% 17%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 14% 17%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 14% 17%;
+  --primary: 210 14% 17%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 184 5% 55%;
+  --accent: 239 84% 67%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 239 84% 67%;
+  --chart-1: 239 84% 67%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 280 65% 60%;
+  --sidebar: 0 0% 98%;
+  --sidebar-foreground: 210 14% 17%;
+  --sidebar-primary: 239 84% 67%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 94%;
+  --sidebar-accent-foreground: 210 14% 17%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-ring: 239 84% 67%;
 }
 
 @layer base {
@@ -118,6 +85,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
@@ -135,4 +103,9 @@
   font-size: 10px !important;
   background: rgba(255, 255, 255, 0.8) !important;
   border-radius: var(--radius-sm) !important;
+}
+
+/* Dashboard shadow token */
+:root {
+  --shadow-dashboard: 0 25px 80px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
