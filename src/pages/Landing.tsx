@@ -116,7 +116,7 @@ export default function Landing() {
               {isAuthenticated ? "Dashboard" : "Sign In"}
             </Button>
             <Button
-              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth?returnTo=/dashboard")}
+              onClick={() => navigate("/auth?returnTo=/dashboard")}
               size="sm"
               className="gap-1.5 text-sm font-medium"
             >
@@ -174,10 +174,10 @@ export default function Landing() {
           >
             <Button
               size="lg"
-              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth?returnTo=/dashboard")}
+              onClick={() => navigate("/auth?returnTo=/dashboard")}
               className="gap-2 px-8 text-sm font-semibold shadow-lg shadow-primary/20"
             >
-              Launch Dashboard
+              Get Started
               <ArrowRight className="size-4" />
             </Button>
             <Button
@@ -331,10 +331,10 @@ export default function Landing() {
           >
             <Button
               size="lg"
-              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth?returnTo=/dashboard")}
+              onClick={() => navigate("/auth?returnTo=/dashboard")}
               className="gap-2 px-8 text-sm font-semibold shadow-lg shadow-primary/20"
             >
-              See it in action
+              Get Started
               <ArrowRight className="size-4" />
             </Button>
           </motion.div>
